@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './task.entity';
-import { Repository } from 'typeorm';
 import { TasksRepository } from './tasks.repository';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskStatus } from './task-status.enum';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
+import { User } from '../auth/user.entity';
 
 @Injectable()
 export class TasksService {
@@ -13,9 +12,9 @@ export class TasksService {
     private readonly tasksRepository: TasksRepository,
   ) {}
 
-  async getTaskById(id: string): Promise<Task> {
+  async getTaskById(id: string, user: User): Promise<Task> {
     const found = await this.tasksRepository.findOne({
-      where: { id },
+      where: { id, user },
     });
 
     if (!found) {
@@ -25,18 +24,18 @@ export class TasksService {
     return found;
   }
 
-  getTasks(filterDto: GetTasksFilterDto): Promise<Task[]> {
-    return this.tasksRepository.getTasks(filterDto);
+  getTasks(filterDto: GetTasksFilterDto, user: User): Promise<Task[]> {
+    return this.tasksRepository.getTasks(filterDto, user);
   }
 
-  createTask(createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.tasksRepository.createTask(createTaskDto);
+  createTask(createTaskDto: CreateTaskDto, user: User): Promise<Task> {
+    return this.tasksRepository.createTask(createTaskDto, user);
   }
 
 //
-  async deleteTask(id: string): Promise<void> {
+  async deleteTask(id: string, user: User): Promise<void> {
     // utiliser getTaskById permet de profiter de la gestion de l'erreur grâce au NotFoundException
-    const result = await this.tasksRepository.delete(id);
+    const result = await this.tasksRepository.delete({ id, user });
 
     if (!result.affected) {
       throw new NotFoundException(`La tâche avec l'ID ${id} est introuvable`);
@@ -44,9 +43,9 @@ export class TasksService {
 
   }
 
-  async updateTaskStatus(id: string, status: TaskStatus): Promise<Task> {
+  async updateTaskStatus(id: string, status: TaskStatus, user: User): Promise<Task> {
     // utiliser getTaskById permet de profiter de la gestion de l'erreur grâce au NotFoundException
-    const task = await this.getTaskById(id);
+    const task = await this.getTaskById(id, user);
 
     task.status = status;
     await this.tasksRepository.save(task);
